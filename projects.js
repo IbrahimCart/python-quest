@@ -368,3 +368,346 @@ assert a.balance == 70, "A failed withdraw shouldn't change the balance"`,
         return True` },
 ]},
 ];
+
+// The course finale: unlocks when every lesson is done.
+window.FINAL_PROJECT = { id: "final", title: "Gradebook", icon: "🏁", steps: [
+  { t: "learn", title: "Final project: Gradebook", body: [
+    "Time to put it all together. You'll build a gradebook that stores students, checks scores and prints a report.",
+    "It uses **classes**, **methods**, **lists**, **dicts**, **loops**, **conditionals**, **try / except** and **f-strings**.",
+    "There are 6 steps, and each one builds on your code from the last."
+  ]},
+  { t: "code", q: "Step 1: Make class `Student`. `__init__(self, name)` sets `name` and an empty `scores` list. `add_score(self, score)` converts score to an int, appends it and returns True. Return False (and add nothing) if it can't be converted or isn't between 0 and 100.",
+    starter: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        pass
+
+    def add_score(self, score):
+        pass
+`,
+    tests: pj`s = Student("Ana")
+assert s.name == "Ana" and s.scores == [], "A new Student has a name and an empty scores list"
+assert s.add_score(90) is True and s.scores == [90], "add_score(90) should add 90 and return True"
+assert s.add_score("85") is True and s.scores == [90, 85], 'add_score("85") should convert the text to 85'
+assert s.add_score("abc") is False, 'add_score("abc") should return False (use try / except ValueError)'
+assert s.add_score(150) is False and s.add_score(-5) is False, "Scores outside 0 to 100 should return False"
+assert s.scores == [90, 85], "Bad scores shouldn't be added"`,
+    hint: "try: score = int(score)  except ValueError: return False. Then if score < 0 or score > 100: return False. Otherwise append and return True.",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True` },
+  { t: "code", carry: true, add: pj`
+    # Step 2: add average() here, inside Student
+`, q: "Step 2: Add `average(self)` to Student. Return the average of the scores rounded to 1 decimal, or 0 if there are no scores.",
+    tests: pj`s = Student("Ana")
+assert s.average() == 0, "No scores should give an average of 0"
+s.add_score(90); s.add_score(85)
+assert s.average() == 87.5, "90 and 85 should average 87.5"
+t = Student("Li")
+for x in [1, 2, 2]:
+    t.add_score(x)
+assert t.average() == 1.7, "Round the average to 1 decimal"`,
+    hint: "if not self.scores: return 0   then   return round(sum(self.scores) / len(self.scores), 1)",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True
+
+    def average(self):
+        if not self.scores:
+            return 0
+        return round(sum(self.scores) / len(self.scores), 1)` },
+  { t: "code", carry: true, add: pj`
+    # Step 3: add letter() here, inside Student
+`, q: "Step 3: Add `letter(self)` that returns a letter grade from the average: A for 90+, B for 80+, C for 70+, D for 60+, otherwise F.",
+    tests: pj`def make(*scores):
+    s = Student("x")
+    for v in scores:
+        s.add_score(v)
+    return s
+for scores, want in [((95,), "A"), ((90,), "A"), ((85,), "B"), ((70,), "C"), ((65,), "D"), ((10,), "F"), ((), "F")]:
+    got = make(*scores).letter()
+    assert got == want, f"An average of {make(*scores).average()} should be {want}, got {got!r}"`,
+    hint: "avg = self.average(), then if avg >= 90: return \"A\", elif avg >= 80: ... else: return \"F\"",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True
+
+    def average(self):
+        if not self.scores:
+            return 0
+        return round(sum(self.scores) / len(self.scores), 1)
+
+    def letter(self):
+        avg = self.average()
+        if avg >= 90:
+            return "A"
+        elif avg >= 80:
+            return "B"
+        elif avg >= 70:
+            return "C"
+        elif avg >= 60:
+            return "D"
+        return "F"` },
+  { t: "code", carry: true, add: pj`
+
+# Step 4: a Gradebook class
+`, q: "Step 4: Make class `Gradebook` with a `students` dict (name → Student). `add_student(name)` creates the Student only if it isn't there yet and returns it. `record(name, score)` adds the student if needed, then returns the result of `add_score`.",
+    tests: pj`gb = Gradebook()
+assert gb.students == {}, "A new Gradebook starts with an empty students dict"
+ana = gb.add_student("Ana")
+assert isinstance(ana, Student) and gb.students["Ana"] is ana, "add_student should store and return a Student"
+assert gb.add_student("Ana") is ana, "Adding the same name again should return the existing Student"
+assert gb.record("Li", 80) is True, "record should return True for a good score"
+assert gb.students["Li"].scores == [80], "record should create Li and add the score"
+assert gb.record("Li", "x") is False, "record should return False for a bad score"`,
+    hint: "In add_student: if name not in self.students: self.students[name] = Student(name). Return self.students[name]. In record: return self.add_student(name).add_score(score)",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True
+
+    def average(self):
+        if not self.scores:
+            return 0
+        return round(sum(self.scores) / len(self.scores), 1)
+
+    def letter(self):
+        avg = self.average()
+        if avg >= 90:
+            return "A"
+        elif avg >= 80:
+            return "B"
+        elif avg >= 70:
+            return "C"
+        elif avg >= 60:
+            return "D"
+        return "F"
+
+
+# Step 4: a Gradebook class
+class Gradebook:
+    def __init__(self):
+        self.students = {}
+
+    def add_student(self, name):
+        if name not in self.students:
+            self.students[name] = Student(name)
+        return self.students[name]
+
+    def record(self, name, score):
+        return self.add_student(name).add_score(score)` },
+  { t: "code", carry: true, add: pj`
+    # Step 5: add report() and top_student() here, inside Gradebook
+`, q: "Step 5: Add `report(self)` that returns a list of lines like `Ana: 92.5 (A)`, sorted by name. Add `top_student(self)` that returns the name with the highest average, or None if there are no students.",
+    tests: pj`gb = Gradebook()
+assert gb.report() == [] and gb.top_student() is None, "An empty gradebook has an empty report and no top student"
+gb.record("Li", 70); gb.record("Ana", 95); gb.record("Ana", 90)
+assert gb.report() == ["Ana: 92.5 (A)", "Li: 70.0 (C)"], f"report() gave {gb.report()!r}"
+assert gb.top_student() == "Ana", "Ana has the highest average"`,
+    hint: "report: loop over sorted(self.students) and build f\"{name}: {s.average()} ({s.letter()})\". top_student: keep the best name while looping, like the Word Counter project.",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True
+
+    def average(self):
+        if not self.scores:
+            return 0
+        return round(sum(self.scores) / len(self.scores), 1)
+
+    def letter(self):
+        avg = self.average()
+        if avg >= 90:
+            return "A"
+        elif avg >= 80:
+            return "B"
+        elif avg >= 70:
+            return "C"
+        elif avg >= 60:
+            return "D"
+        return "F"
+
+
+# Step 4: a Gradebook class
+class Gradebook:
+    def __init__(self):
+        self.students = {}
+
+    def add_student(self, name):
+        if name not in self.students:
+            self.students[name] = Student(name)
+        return self.students[name]
+
+    def record(self, name, score):
+        return self.add_student(name).add_score(score)
+
+    def report(self):
+        lines = []
+        for name in sorted(self.students):
+            s = self.students[name]
+            lines.append(f"{name}: {s.average()} ({s.letter()})")
+        return lines
+
+    def top_student(self):
+        best = None
+        for name, s in self.students.items():
+            if best is None or s.average() > self.students[best].average():
+                best = name
+        return best` },
+  { t: "code", carry: true, add: pj`
+
+# Step 6: use your gradebook
+data = [("Ana", 95), ("Li", "88"), ("Ana", "oops"), ("Sam", 72), ("Li", 91), ("Sam", 105)]
+`, q: "Step 6: Make a Gradebook and record every `(name, score)` in `data`, counting how many were skipped. Print each report line, then `Top student: <name>`, then `Skipped: <count>`.",
+    tests: pj`want = ["Ana: 95.0 (A)", "Li: 89.5 (B)", "Sam: 72.0 (C)", "Top student: Ana", "Skipped: 2"]
+got = _out.strip().splitlines()
+assert got == want, "Expected these lines:\n" + "\n".join(want)
+g = _rerun(data=[("Zoe", 60), ("Zoe", "bad")])
+assert g["_out"].strip().splitlines() == ["Zoe: 60.0 (D)", "Top student: Zoe", "Skipped: 1"], "Work from data, don't hard-code the output"`,
+    hint: "gb = Gradebook(), skipped = 0. for name, score in data: if not gb.record(name, score): skipped += 1. Then loop over gb.report() to print, and print the two f-strings.",
+    solution: pj`# Final Project: Gradebook
+# Step 1: a Student class
+
+class Student:
+    def __init__(self, name):
+        self.name = name
+        self.scores = []
+
+    def add_score(self, score):
+        try:
+            score = int(score)
+        except ValueError:
+            return False
+        if score < 0 or score > 100:
+            return False
+        self.scores.append(score)
+        return True
+
+    def average(self):
+        if not self.scores:
+            return 0
+        return round(sum(self.scores) / len(self.scores), 1)
+
+    def letter(self):
+        avg = self.average()
+        if avg >= 90:
+            return "A"
+        elif avg >= 80:
+            return "B"
+        elif avg >= 70:
+            return "C"
+        elif avg >= 60:
+            return "D"
+        return "F"
+
+
+# Step 4: a Gradebook class
+class Gradebook:
+    def __init__(self):
+        self.students = {}
+
+    def add_student(self, name):
+        if name not in self.students:
+            self.students[name] = Student(name)
+        return self.students[name]
+
+    def record(self, name, score):
+        return self.add_student(name).add_score(score)
+
+    def report(self):
+        lines = []
+        for name in sorted(self.students):
+            s = self.students[name]
+            lines.append(f"{name}: {s.average()} ({s.letter()})")
+        return lines
+
+    def top_student(self):
+        best = None
+        for name, s in self.students.items():
+            if best is None or s.average() > self.students[best].average():
+                best = name
+        return best
+
+
+# Step 6: use your gradebook
+data = [("Ana", 95), ("Li", "88"), ("Ana", "oops"), ("Sam", 72), ("Li", 91), ("Sam", 105)]
+gb = Gradebook()
+skipped = 0
+for name, score in data:
+    if not gb.record(name, score):
+        skipped += 1
+for line in gb.report():
+    print(line)
+print(f"Top student: {gb.top_student()}")
+print(f"Skipped: {skipped}")` },
+]};

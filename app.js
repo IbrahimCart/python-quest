@@ -27,7 +27,9 @@
     const proj = PROJECTS.find(p => p.unit === u.id);
     if (proj) { proj.unit = u; proj.ui = ui; proj.isProject = true; u.project = proj; }
   });
-  const byId = Object.fromEntries([...LESSONS, ...PROJECTS].map(l => [l.id, l]));
+  const FINAL = window.FINAL_PROJECT || null;
+  if (FINAL) { FINAL.isProject = true; FINAL.isFinal = true; }
+  const byId = Object.fromEntries([...LESSONS, ...PROJECTS, ...(FINAL ? [FINAL] : [])].map(l => [l.id, l]));
 
   // ───────── helpers ─────────
   const $ = (s, el = document) => el.querySelector(s);
@@ -107,8 +109,10 @@
   }
 
   const isDone = l => !!S.done[l.id];
-  const isOpen = l => l.isProject ? l.unit.lessons.every(isDone) : (l.idx === 0 || isDone(LESSONS[l.idx - 1]) || isDone(l));
   const doneCount = () => LESSONS.filter(isDone).length;
+  const isOpen = l => l.isFinal ? doneCount() === LESSONS.length
+    : l.isProject ? l.unit.lessons.every(isDone)
+    : (l.idx === 0 || isDone(LESSONS[l.idx - 1]) || isDone(l));
   const projectsDone = () => PROJECTS.filter(isDone).length;
 
   const BADGES = [
@@ -127,6 +131,7 @@
     { id: "half", icon: "🧭", name: "Halfway", desc: "Finish half the lessons", ok: () => doneCount() >= Math.ceil(LESSONS.length / 2) },
     { id: "stars", icon: "🌟", name: "Star Collector", desc: "3 stars on 10 lessons", ok: () => LESSONS.filter(l => isDone(l) && S.done[l.id].stars === 3).length >= 10 },
     { id: "grad", icon: "🎓", name: "Pythonista", desc: "Finish every lesson", ok: () => doneCount() === LESSONS.length },
+    { id: "capstone", icon: "🏁", name: "Graduate", desc: "Finish the final project", ok: () => !!FINAL && isDone(FINAL) },
   ];
   function checkBadges() {
     const fresh = BADGES.filter(b => !S.badges.includes(b.id) && b.ok());
@@ -368,8 +373,20 @@
         </div>
         ${goalCard()}
         <button class="btn" data-lesson="${next.id}">${doneCount() ? "Continue" : "Start learning"} →</button>
-      </div>` : `
+      </div>` : FINAL && !isDone(FINAL) ? `
+      <div class="hero"><h1>🏁 All lessons done!</h1><p>Your final project is unlocked: build a <b>${esc(FINAL.title)}</b> using everything you've learned.</p>
+        ${goalCard()}<button class="btn" data-lesson="${FINAL.id}">Start final project →</button></div>` : `
       <div class="hero"><h1>🎓 Course complete!</h1><p>Replay lessons for more stars, build the projects, or keep sharp in Review.</p>${goalCard()}</div>`;
+    const finalCard = FINAL ? (() => {
+      const open = isOpen(FINAL), done = isDone(FINAL);
+      return `<section class="final ${done ? "done" : open ? "open" : "locked"}">
+        <div class="final-icon">${open || done ? FINAL.icon : "🔒"}</div>
+        <div class="final-kicker">Final project</div>
+        <h2>${esc(FINAL.title)}</h2>
+        <p>${done ? "Complete. You built a full Python program! 🎓" : open ? "Build a full program using classes, loops, dicts, error handling and more." : `Finish all ${LESSONS.length} lessons to unlock (${doneCount()}/${LESSONS.length}).`}</p>
+        ${open || done ? `<button class="btn" data-lesson="${FINAL.id}">${done ? "Build it again" : "Start final project"} →</button>` : ""}
+      </section>`;
+    })() : "";
     $("#view").innerHTML = hero + COURSE.map((u, ui) => {
       const d = u.lessons.filter(isDone).length;
       const p = u.project;
@@ -393,13 +410,13 @@
             <span class="ptxt"><small>${pDone ? "Project complete ✓" : pOpen ? "Project unlocked" : "Project · finish the unit to unlock"}</small><b>${esc(p.title)}</b></span>
             <span class="pgo">${pOpen || pDone ? "›" : ""}</span></button>` : ""}
       </section>`;
-    }).join("");
+    }).join("") + finalCard;
   }
   $("#view").addEventListener("click", e => {
     const b = e.target.closest("[data-lesson]");
     if (!b) return;
     const l = byId[b.dataset.lesson];
-    if (!isOpen(l)) return toast(l.isProject ? "🔒 Finish this unit's lessons to unlock the project." : "🔒 Finish the lesson before this one first.");
+    if (!isOpen(l)) return toast(l.isFinal ? "🔒 Finish every lesson to unlock the final project." : l.isProject ? "🔒 Finish this unit's lessons to unlock the project." : "🔒 Finish the lesson before this one first.");
     startLesson(l, l.isProject ? "project" : "lesson");
   });
 
@@ -572,7 +589,7 @@
   }
   function kicker(fallback) {
     if (L.mode === "review") return `Review · ${esc(L.queue[L.pos].from || "")}`;
-    if (L.mode === "project") return `🛠️ Project · ${esc(L.lesson.title)}`;
+    if (L.mode === "project") return `${L.lesson.isFinal ? "🏁 Final project" : "🛠️ Project"} · ${esc(L.lesson.title)}`;
     return fallback;
   }
 
@@ -785,7 +802,7 @@
     const stars = L.mistakes === 0 ? 3 : L.mistakes <= 2 ? 2 : 1;
     let bonus = 0;
     if (mode === "lesson" || mode === "project") {
-      bonus += Math.round((mode === "project" ? 50 : 20) * L.mult);
+      bonus += Math.round((L.lesson.isFinal ? 200 : mode === "project" ? 50 : 20) * L.mult);
       if (L.mistakes === 0) { bonus += Math.round(15 * L.mult); if (mode === "lesson") S.perfects++; }
       const prev = S.done[L.lesson.id];
       S.done[L.lesson.id] = { stars: Math.max(stars, prev ? prev.stars : 0), at: Date.now() };
@@ -803,7 +820,7 @@
     confetti(); sfx.win();
     const head = mode === "review" ? `<div class="big">🧠</div>` : mode === "project" ? `<div class="big">${L.lesson.icon}</div>`
       : `<div class="big">${[0, 1, 2].map(i => `<span class="s ${i < stars ? "" : "off"}" style="animation-delay:${.15 + i * .2}s">⭐</span>`).join("")}</div>`;
-    const title = mode === "review" ? "Review complete!" : mode === "project" ? `You built ${L.lesson.title}!` : L.mistakes === 0 ? "Flawless!" : "Lesson complete!";
+    const title = mode === "review" ? "Review complete!" : L.lesson.isFinal ? "🎓 You finished Python Quest!" : mode === "project" ? `You built ${L.lesson.title}!` : L.mistakes === 0 ? "Flawless!" : "Lesson complete!";
     body.innerHTML = `<div class="result">
       ${head}<h3>${esc(title)}</h3>
       <div class="gain">

@@ -392,3 +392,16 @@ pre.code.mini b { color: #4ade80; }
 .gterm b { font-size: 16px; }
 .gterm p { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
 .gterm pre.code.mini { margin: 8px 0 0; }
+
+/* Final project */
+.final {
+  text-align: center; margin: 10px 0 20px; padding: 24px 18px; border-radius: 22px;
+  background: linear-gradient(135deg, #f2a900, #ff6a3d 55%, #9b5cff); color: #fff; box-shadow: var(--shadow);
+}
+.final.locked { background: var(--surface); color: var(--text); border: 2px dashed var(--line); box-shadow: none; }
+.final-icon { font-size: 54px; line-height: 1; margin-bottom: 6px; }
+.final-kicker { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; opacity: .9; }
+.final h2 { margin: 2px 0 6px; font-size: 24px; letter-spacing: -.02em; }
+.final p { margin: 0 0 14px; opacity: .95; }
+.final.locked p { color: var(--muted); margin: 0; }
+.final .btn { background: #fff; color: #7a2e00; box-shadow: 0 4px 0 rgba(0,0,0,.2); }

@@ -56,7 +56,7 @@ def _pq_run(code, tests):
     except AssertionError as e:
         return json.dumps({"ok": False, "out": out, "fail": str(e) or "Not quite. Read the task again."})
     except NameError as e:
-        return json.dumps({"ok": False, "out": out, "fail": f"{str(e).capitalize()}. Did you create it with the exact name?"})
+        return json.dumps({"ok": False, "out": out, "fail": f"{str(e)[:1].upper()}{str(e)[1:]}. Did you create it with the exact name?"})
     except Exception as e:
         return json.dumps({"ok": False, "out": out, "fail": _pq_err(e)})
     return json.dumps({"ok": True, "out": out, "passed": True})
