@@ -1,5 +1,5 @@
 // Offline support: app files are network-first (so updates show up), Pyodide files are cache-first.
-const APP = "pq-app-v2";
+const APP = "pq-app-v3";
 const CDN = "pq-cdn-v1";
 const SHELL = ["./", "index.html", "style.css", "app.js", "lessons.js", "practice.js", "projects.js", "glossary.js", "py-worker.js", "manifest.webmanifest", "icon.svg", "apple-touch-icon.png", "icon-512.png"];
 
@@ -32,7 +32,7 @@ self.addEventListener("fetch", (e) => {
   }
   if (url.origin === self.location.origin) {
     e.respondWith(
-      fetch(e.request)
+      fetch(e.request, { cache: "no-cache" }) // always check for updates
         .then((res) => {
           if (res.ok) { const copy = res.clone(); caches.open(APP).then((c) => c.put(e.request, copy)); }
           return res;
