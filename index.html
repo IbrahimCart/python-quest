@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Python Quest</title>
+<meta name="description" content="Learn Python one bite-sized, game-like lesson at a time, with real Python running in your browser.">
+<meta name="theme-color" content="#0f1222" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f6f7fb" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Py Quest">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header class="topbar" id="topbar"></header>
+  <main id="view" tabindex="-1"></main>
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button data-tab="learn" class="active"><span class="ti">🗺️</span><span>Learn</span></button>
+    <button data-tab="review"><span class="ti">🔁</span><span>Review</span></button>
+    <button data-tab="play"><span class="ti">🧪</span><span>Playground</span></button>
+    <button data-tab="profile"><span class="ti">🏆</span><span>Profile</span></button>
+  </nav>
+</div>
+
+<section id="lesson" class="lesson" hidden aria-modal="true" role="dialog">
+  <div class="l-top">
+    <button class="icon-btn" id="quit" aria-label="Quit lesson">✕</button>
+    <div class="pbar"><i id="pfill"></i></div>
+    <div class="combo" id="combo" aria-live="polite"></div>
+  </div>
+  <div class="l-body" id="lbody"></div>
+  <div class="l-foot" id="lfoot"></div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script src="lessons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
