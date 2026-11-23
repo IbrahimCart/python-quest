@@ -7,8 +7,12 @@
   const GLOSSARY = window.GLOSSARY || [];
 
   const LESSONS = [];
+  const CHALLENGES = window.CHALLENGES || {};
+  const SPECS = window.PROJECT_SPECS || {};
   COURSE.forEach((u, ui) => {
     u.lessons.forEach((l, li) => {
+      const ch = CHALLENGES[l.id];
+      if (ch) l.steps = l.steps.map(s => s.t === "code" ? { t: "code", ...ch } : s);
       const p = PRACTICE[l.id];
       if (p) {
         const steps = l.steps.slice();
@@ -29,6 +33,13 @@
   });
   const FINAL = window.FINAL_PROJECT || null;
   if (FINAL) { FINAL.isProject = true; FINAL.isFinal = true; }
+  // project steps: describe what to build, not how
+  [...PROJECTS, ...(FINAL ? [FINAL] : [])].forEach(p => {
+    const specs = SPECS[p.id];
+    if (!specs) return;
+    let k = 0;
+    p.steps.forEach(s => { if (s.t === "code" && specs[k]) Object.assign(s, specs[k++]); });
+  });
   const byId = Object.fromEntries([...LESSONS, ...PROJECTS, ...(FINAL ? [FINAL] : [])].map(l => [l.id, l]));
 
   // ───────── helpers ─────────
@@ -726,17 +737,20 @@
   }
 
   function stepCode(s) {
-    let fails = 0, usedSolution = false;
+    let fails = 0, usedSolution = false, hintsShown = 0;
+    const hints = s.hints || (s.hint ? [s.hint] : []);
+    const SOLUTION_AFTER = 3;
     const starter = s.carry && L.lastCode != null ? L.lastCode.replace(/\s*$/, "\n") + (s.add || "") : (s.starter || "");
     body.innerHTML = `<div class="kicker">${kicker("⌨️ Code challenge")}</div>
       <h3>${md(s.q)}</h3>
       ${panel(editorInner(starter), { run: true, id: "cp" })}
       ${keysHTML()}
       <div class="row">
-        <button class="btn ghost small" id="hint">💡 Hint</button>
-        <button class="btn ghost small" id="sol" hidden>👀 Show solution</button>
+        <button class="btn ghost small" id="hint" ${hints.length ? "" : "hidden"}>💡 Hint 1/${hints.length} · −XP</button>
+        <button class="btn ghost small" id="sol" hidden>👀 Solution (no XP)</button>
         <button class="btn ghost small" id="reset">↺ Reset</button>
       </div>
+      <p class="tip" id="solTip">Solve it yourself first. Hints cost XP, and the solution unlocks after ${SOLUTION_AFTER} failed checks.</p>
       <div id="hintArea"></div>
       <div class="pystatus"></div>`;
     pyStatusUI();
@@ -746,8 +760,17 @@
       $("#check").onclick = check;
     };
     $(".runbtn", cp).onclick = () => runInto(cp, ta.value);
-    $("#hint").onclick = () => { $("#hintArea").innerHTML = `<div class="hintbox">💡 ${md(s.hint)}</div>`; };
+    $("#hint").onclick = () => {
+      if (hintsShown >= hints.length) return;
+      if (hintsShown === 0) L.mistakes++; // using hints costs a star
+      hintsShown++;
+      $("#hintArea").innerHTML = hints.slice(0, hintsShown).map((h, i) => `<div class="hintbox">💡 <b>Hint ${i + 1}:</b> ${md(h)}</div>`).join("");
+      const hb = $("#hint");
+      if (hintsShown >= hints.length) hb.hidden = true;
+      else hb.textContent = `💡 Hint ${hintsShown + 1}/${hints.length} · −XP`;
+    };
     $("#sol").onclick = () => {
+      if (!confirm("Show the solution? You'll get no XP for this challenge.")) return;
       usedSolution = true; ta.value = s.solution;
       $("#hintArea").innerHTML = `<div class="hintbox">👀 Solution loaded. Read it, then tap Check. (No XP for this one.)</div>`;
     };
@@ -760,16 +783,23 @@
         showConsole(out, res, `<span class="ok">${res.out ? "\n" : ""}✓ All checks passed</span>`);
         L.done++; L.lastCode = ta.value;
         let x = 0;
-        if (!usedSolution) { L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo); x = award(25); L.codePassed++; }
+        if (!usedSolution) {
+          L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo);
+          x = award(Math.max(10, 30 - hintsShown * 8)); L.codePassed++;
+        }
         renderCombo(true); progress(); sfx.good();
-        feedback(true, usedSolution ? "Done" : "It works!", usedSolution ? "Try writing it yourself next time." : "", x);
+        const note = usedSolution ? "Try writing it yourself next time." : hintsShown ? `Solved with ${hintsShown} hint${hintsShown > 1 ? "s" : ""}.` : fails ? "" : "First try, no hints. 💪";
+        feedback(true, usedSolution ? "Done" : "It works!", note, x);
       } else {
         fails++; L.combo = 0; renderCombo(); sfx.bad();
         if (fails === 1) { L.mistakes++; if (L.mode === "lesson") loseHeart(); }
-        if (fails >= 2) $("#sol").hidden = false;
+        if (fails >= SOLUTION_AFTER) { $("#sol").hidden = false; $("#solTip").hidden = true; }
         showConsole(out, res);
         const msg = res.error ? `Your code hit an error: <code>${esc(res.error)}</code>` : esc(res.fail || "Not quite.");
-        feedback(false, "Not yet", msg + (fails >= 2 ? "<br><span class='muted'>Stuck? Use Hint or Show solution.</span>" : ""), 0, "Try again", () => {
+        const nudge = fails >= SOLUTION_AFTER
+          ? (hintsShown < hints.length ? "Still stuck? Try a hint first. The solution is unlocked if you really need it." : "The solution is unlocked if you really need it.")
+          : hintsShown < hints.length && fails >= 2 ? "Stuck? A hint might help." : "Read the message, fix it, and check again.";
+        feedback(false, "Not yet", `${msg}<br><span class='muted'>${nudge}</span>`, 0, "Try again", () => {
           if (L.mode === "lesson" && S.hearts <= 0) return outOfHearts();
           setCheck(); ta.focus();
         });

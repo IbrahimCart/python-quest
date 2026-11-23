@@ -1,7 +1,7 @@
 // Offline support: app files are network-first (so updates show up), Pyodide files are cache-first.
-const APP = "pq-app-v4";
+const APP = "pq-app-v5";
 const CDN = "pq-cdn-v1";
-const SHELL = ["./", "index.html", "style.css", "app.js", "lessons.js", "practice.js", "projects.js", "glossary.js", "py-worker.js", "manifest.webmanifest", "icon.svg", "apple-touch-icon.png", "icon-512.png"];
+const SHELL = ["./", "index.html", "style.css", "app.js", "lessons.js", "practice.js", "projects.js", "glossary.js", "challenges.js", "py-worker.js", "manifest.webmanifest", "icon.svg", "apple-touch-icon.png", "icon-512.png"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(APP).then((c) => Promise.allSettled(SHELL.map((u) => c.add(u)))).then(() => self.skipWaiting()));
