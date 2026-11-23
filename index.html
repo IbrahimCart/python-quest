@@ -23,7 +23,8 @@
   <nav class="tabs" id="tabs" aria-label="Sections">
     <button data-tab="learn" class="active"><span class="ti">🗺️</span><span>Learn</span></button>
     <button data-tab="review"><span class="ti">🔁</span><span>Review</span></button>
-    <button data-tab="play"><span class="ti">🧪</span><span>Playground</span></button>
+    <button data-tab="glossary"><span class="ti">📖</span><span>Glossary</span></button>
+    <button data-tab="play"><span class="ti">🧪</span><span>Code</span></button>
     <button data-tab="profile"><span class="ti">🏆</span><span>Profile</span></button>
   </nav>
 </div>
@@ -33,6 +34,7 @@
     <button class="icon-btn" id="quit" aria-label="Quit lesson">✕</button>
     <div class="pbar"><i id="pfill"></i></div>
     <div class="combo" id="combo" aria-live="polite"></div>
+    <div class="lhearts" id="lhearts" aria-label="Hearts left"></div>
   </div>
   <div class="l-body" id="lbody"></div>
   <div class="l-foot" id="lfoot"></div>
@@ -42,6 +44,9 @@
 <canvas id="confetti" aria-hidden="true"></canvas>
 
 <script src="lessons.js"></script>
+<script src="practice.js"></script>
+<script src="projects.js"></script>
+<script src="glossary.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
