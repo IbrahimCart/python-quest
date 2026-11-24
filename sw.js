@@ -1,5 +1,5 @@
 // Offline support: app files are network-first (so updates show up), Pyodide files are cache-first.
-const APP = "pq-app-v6";
+const APP = "pq-app-v7";
 const CDN = "pq-cdn-v1";
 const SHELL = ["./", "index.html", "style.css", "app.js", "lessons.js", "practice.js", "projects.js", "glossary.js", "challenges.js", "walkthroughs.js", "py-worker.js", "manifest.webmanifest", "icon.svg", "apple-touch-icon.png", "icon-512.png"];
 

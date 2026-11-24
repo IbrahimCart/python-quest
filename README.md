@@ -5,6 +5,7 @@ A game-like Python course that runs in the browser, built for phones.
 - 10 units, 33 short lessons (variables to classes) that mix explanations with practice
 - Tap-to-code exercises: fill in blanks with word chips and put code lines in order, no typing needed
 - A problem-style code challenge in every lesson (hidden edge-case tests; hints cost XP). Get one wrong and you can be walked through it step by step, then prove you understand with a similar problem set up differently, a build-it project at the end of each unit, and a 6-step final project (a Gradebook) that uses everything from the course
+- Challenge mode: runs of 5 random code problems (66 in all, 2 versions per lesson), with no repeats until you have done the whole pool
 - Real Python runs in the browser with [Pyodide](https://pyodide.org): tap Run on any example, and code is checked instantly
 - Hearts (refill over time or by reviewing), a daily XP goal, XP, levels, streaks, combos, stars and badges
 - Review mode, a searchable glossary, a Python playground, and offline support after the first load
