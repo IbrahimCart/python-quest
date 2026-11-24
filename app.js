@@ -58,7 +58,7 @@
   const STORE = "pyquest:v1";
   const MAX_HEARTS = 5, REFILL_MS = 30 * 60 * 1000;
   const defaults = {
-    xp: 0, done: {}, streak: 0, bestStreak: 0, lastDay: null, badges: [], codeSolved: 0, reviews: 0, perfects: 0, comebacks: 0, runs: 0, seenCh: [], chAll: false,
+    xp: 0, done: {}, streak: 0, bestStreak: 0, lastDay: null, badges: [], codeSolved: 0, reviews: 0, perfects: 0, comebacks: 0, runs: 0, tsolved: {},
     sound: true, play: "", hearts: MAX_HEARTS, heartAt: null, goal: 50, day: null, dayXP: 0,
   };
   let S;
@@ -131,7 +131,7 @@
   const BADGES = [
     { id: "first", icon: "🐣", name: "Hello, World", desc: "Finish your first lesson", ok: () => doneCount() >= 1 },
     { id: "perfect", icon: "💎", name: "Flawless", desc: "Finish a lesson with no mistakes", ok: () => S.perfects >= 1 },
-    { id: "challenger", icon: "⚔️", name: "Challenger", desc: "Finish a challenge run", ok: () => (S.runs || 0) >= 1 },
+    { id: "challenger", icon: "⚔️", name: "Challenger", desc: "Finish a topic practice set", ok: () => (S.runs || 0) >= 1 },
     { id: "comeback", icon: "💡", name: "Comeback", desc: "Solve a similar problem after a walkthrough", ok: () => (S.comebacks || 0) >= 1 },
     { id: "goal", icon: "🎯", name: "Goal Getter", desc: "Hit your daily XP goal", ok: () => todayXP() >= S.goal },
     { id: "coder5", icon: "⌨️", name: "Coder", desc: "Pass 5 code challenges", ok: () => S.codeSolved >= 5 },
@@ -460,61 +460,37 @@
     if (b) b.onclick = () => startReview(pool);
   }
 
-  // ───────── Challenge runs ─────────
-  // Every lesson challenge and its twin, in a no-repeat rotation.
-  const RUN_SIZE = 5;
-  function challengePool(all) {
-    return LESSONS.filter(l => all || isDone(l)).flatMap(l => {
-      const s = l.steps.find(x => x.t === "code");
-      if (!s) return [];
-      const items = [{ ...s, from: l.title, key: l.id, lid: l.id }];
-      if (s.alt) items.push({ ...s.alt, alt: s, from: l.title, key: l.id + "~twin", lid: l.id });
-      return items;
-    });
+  // ───────── Topic practice ─────────
+  // Code-only problems built from templates with fresh random values each time.
+  const TP = window.TOPICS;
+  const SET_SIZE = 5;
+  const topicLearned = t => t.lessons.some(id => byId[id] && isDone(byId[id]));
+  function startTopic(t) {
+    startLesson({ id: "topic", title: t.title, steps: TP.set(t, SET_SIZE) }, "challenge");
   }
-  function pickRun(pool) {
-    const seen = new Set(S.seenCh || []);
-    let fresh = shuffle(pool.filter(p => !seen.has(p.key)));
-    if (fresh.length < RUN_SIZE) {
-      // rotation used up: start a new one, keeping this run's fresh picks first
-      S.seenCh = (S.seenCh || []).filter(k => !pool.some(p => p.key === k));
-      fresh = fresh.concat(shuffle(pool.filter(p => seen.has(p.key))));
-    }
-    const picked = [], lessons = new Set();
-    for (const p of fresh) {
-      if (picked.length >= RUN_SIZE) break;
-      if (lessons.has(p.lid)) continue; // never a problem and its twin in one run
-      picked.push(p); lessons.add(p.lid);
-    }
-    S.seenCh = [...new Set([...(S.seenCh || []), ...picked.map(p => p.key)])];
-    save();
-    return picked;
+  function startMixed() {
+    const learned = TP.list.filter(topicLearned);
+    const pool = learned.length ? learned : TP.list.slice(0, 2);
+    const steps = shuffle(pool.slice()).concat(shuffle(pool.slice())).slice(0, SET_SIZE).map(t => TP.problem(t));
+    startLesson({ id: "topic", title: "Mixed", steps }, "challenge");
   }
   function renderChallenge() {
-    const pool = challengePool(S.chAll);
-    const learned = challengePool(false).length;
-    const seen = new Set(S.seenCh || []);
-    const left = pool.filter(p => !seen.has(p.key)).length;
+    const solved = S.tsolved || {};
+    const nLearned = TP.list.filter(topicLearned).length;
     $("#view").innerHTML = `
-      <div class="card"><h2>⚔️ Challenge run</h2>
-        <p>${RUN_SIZE} random code problems, nothing else. No repeats until you've done every problem in the pool. No hearts at stake.</p>
-        <div class="seg seg2"><button class="${S.chAll ? "" : "on"}" data-all="0"><b>Learned</b><small>${learned} problems</small></button>
-          <button class="${S.chAll ? "on" : ""}" data-all="1"><b>Everything</b><small>${challengePool(true).length} problems</small></button></div>
-        ${pool.length ? `<p class="muted" style="font-size:14px">${left} new problem${left === 1 ? "" : "s"} left in this rotation.</p>`
-          : `<p class="muted">Finish a lesson first, or switch to Everything.</p>`}
-        <button class="btn block" id="startRun" ${pool.length ? "" : "disabled"}>Start a run</button></div>
-      <div class="card"><h2>How it works</h2>
-        <ul class="learn">
-          <li>Problems come from every lesson, plus a second version of each one.</li>
-          <li>Get one wrong and you can be walked through it, then solve a similar problem.</li>
-          <li>Stuck for good? Skip it, but you earn nothing for that one.</li>
-        </ul>
-        <p class="muted" style="margin:0">Runs finished: <b>${S.runs || 0}</b></p></div>`;
-    $$("[data-all]").forEach(b => b.onclick = () => { S.chAll = b.dataset.all === "1"; save(); renderChallenge(); });
-    $("#startRun").onclick = () => {
-      const steps = pickRun(pool);
-      if (steps.length) startLesson({ id: "run", title: "Challenge run", steps }, "challenge");
-    };
+      <div class="card"><h2>⚔️ Practice by topic</h2>
+        <p>Pick a topic for ${SET_SIZE} code problems. The numbers, words and examples change every time, so you have to solve them, not remember them. No hearts at stake.</p>
+        <button class="btn block" id="mixed">🔀 Mixed set${nLearned ? ` from ${nLearned} learned topic${nLearned === 1 ? "" : "s"}` : ""}</button></div>
+      <div class="topics">${TP.list.map(t => {
+        const learned = topicLearned(t), n = solved[t.id] || 0;
+        return `<button class="topic" data-topic="${t.id}">
+          <span class="t-icon">${t.icon}</span>
+          <span class="t-main"><b>${esc(t.title)}</b><small>${t.gens.length} problem types · ${learned ? "learned ✓" : "not learned yet"}</small></span>
+          <span class="t-count" title="Problems solved">${n ? `✓ ${n}` : ""}</span></button>`;
+      }).join("")}</div>
+      <p class="muted" style="font-size:13px;text-align:center">Wrong answer? You can be walked through it, then you get a similar problem. Stuck for good? Skip it.</p>`;
+    $("#mixed").onclick = startMixed;
+    $$("[data-topic]").forEach(b => b.onclick = () => startTopic(TP.list.find(t => t.id === b.dataset.topic)));
   }
 
   // ───────── Glossary ─────────
@@ -861,6 +837,7 @@
         }
         if (s.retry) S.comebacks = (S.comebacks || 0) + 1;
         if (!s.retry && !usedSolution && !fails && !hintsShown) L.clean++;
+        if (s.topic && !usedSolution) { S.tsolved = S.tsolved || {}; S.tsolved[s.topic] = (S.tsolved[s.topic] || 0) + 1; }
         renderCombo(true); progress(); sfx.good();
         const note = usedSolution ? "Try writing it yourself next time."
           : s.retry ? "You learned it from your mistake. 💡"
@@ -987,7 +964,7 @@
     confetti(); sfx.win();
     const head = mode === "challenge" ? `<div class="big">⚔️</div>` : mode === "review" ? `<div class="big">🧠</div>` : mode === "project" ? `<div class="big">${L.lesson.icon}</div>`
       : `<div class="big">${[0, 1, 2].map(i => `<span class="s ${i < stars ? "" : "off"}" style="animation-delay:${.15 + i * .2}s">⭐</span>`).join("")}</div>`;
-    const title = mode === "challenge" ? "Run complete!" : mode === "review" ? "Review complete!" : L.lesson.isFinal ? "🎓 You finished Python Quest!" : mode === "project" ? `You built ${L.lesson.title}!` : L.mistakes === 0 ? "Flawless!" : "Lesson complete!";
+    const title = mode === "challenge" ? `${L.lesson.title}: set complete!` : mode === "review" ? "Review complete!" : L.lesson.isFinal ? "🎓 You finished Python Quest!" : mode === "project" ? `You built ${L.lesson.title}!` : L.mistakes === 0 ? "Flawless!" : "Lesson complete!";
     body.innerHTML = `<div class="result">
       ${head}<h3>${esc(title)}</h3>
       <div class="gain">

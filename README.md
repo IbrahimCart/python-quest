@@ -5,7 +5,7 @@ A game-like Python course that runs in the browser, built for phones.
 - 10 units, 33 short lessons (variables to classes) that mix explanations with practice
 - Tap-to-code exercises: fill in blanks with word chips and put code lines in order, no typing needed
 - A problem-style code challenge in every lesson (hidden edge-case tests; hints cost XP). Get one wrong and you can be walked through it step by step, then prove you understand with a similar problem set up differently, a build-it project at the end of each unit, and a 6-step final project (a Gradebook) that uses everything from the course
-- Challenge mode: runs of 5 random code problems (66 in all, 2 versions per lesson), with no repeats until you have done the whole pool
+- Practice by topic: 14 topics with 67 problem types in all. Each problem is built with fresh random values and checked against a reference solution on several inputs, so answers can't be memorized
 - Real Python runs in the browser with [Pyodide](https://pyodide.org): tap Run on any example, and code is checked instantly
 - Hearts (refill over time or by reviewing), a daily XP goal, XP, levels, streaks, combos, stars and badges
 - Review mode, a searchable glossary, a Python playground, and offline support after the first load
@@ -33,6 +33,7 @@ Then open http://localhost:8000.
 | `projects.js` | One multi-step project per unit |
 | `glossary.js` | Glossary terms |
 | `challenges.js` | Problem-style code challenges (hidden edge-case tests, tiered hints) and project specs |
+| `topics.js` | Topic practice: randomized problem templates, each with a reference solution and walkthrough |
 | `walkthroughs.js` | Step-by-step walkthroughs for each challenge, plus a similar "twin" problem with its own walkthrough |
 | `app.js` | The app: map, lesson player, hearts, daily goal, XP, badges, review, glossary, playground |
 | `py-worker.js` | Runs Python in a Web Worker and checks code against tests |
