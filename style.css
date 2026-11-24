@@ -405,3 +405,16 @@ pre.code.mini b { color: #4ade80; }
 .final p { margin: 0 0 14px; opacity: .95; }
 .final.locked p { color: var(--muted); margin: 0; }
 .final .btn { background: #fff; color: #7a2e00; box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+
+/* walkthrough */
+.wrong-box { background: var(--bad-bg); }
+.yours { margin: 10px 0 4px; font-size: 14px; color: var(--muted); }
+.yours summary { cursor: pointer; font-weight: 700; }
+.wsteps { list-style: none; padding: 0; margin: 14px 0 12px; display: grid; gap: 10px; }
+.wsteps li { display: flex; gap: 10px; align-items: flex-start; font-size: 16px; line-height: 1.45; }
+.wsteps li.past { opacity: .55; }
+.wnum { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-weight: 800; font-size: 14px; display: grid; place-items: center; }
+.wsteps li.past .wnum { background: var(--surface-2); color: var(--muted); }
+.panel-body pre.wcode { padding: 14px 0; }
+.wcode .cl { display: block; min-height: 1.55em; padding: 0 14px; min-width: 100%; width: max-content; box-sizing: border-box; }
+.wcode .cl.new { background: color-mix(in srgb, var(--good) 24%, transparent); }

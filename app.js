@@ -9,10 +9,12 @@
   const LESSONS = [];
   const CHALLENGES = window.CHALLENGES || {};
   const SPECS = window.PROJECT_SPECS || {};
+  const WALKS = window.WALKTHROUGHS || {};
   COURSE.forEach((u, ui) => {
     u.lessons.forEach((l, li) => {
-      const ch = CHALLENGES[l.id];
-      if (ch) l.steps = l.steps.map(s => s.t === "code" ? { t: "code", ...ch } : s);
+      const ch = CHALLENGES[l.id], w = WALKS[l.id];
+      if (ch) l.steps = l.steps.map(s => s.t !== "code" ? s
+        : w ? { t: "code", ...ch, walk: w.walk, alt: { t: "code", ...w.twin } } : { t: "code", ...ch });
       const p = PRACTICE[l.id];
       if (p) {
         const steps = l.steps.slice();
@@ -56,7 +58,7 @@
   const STORE = "pyquest:v1";
   const MAX_HEARTS = 5, REFILL_MS = 30 * 60 * 1000;
   const defaults = {
-    xp: 0, done: {}, streak: 0, bestStreak: 0, lastDay: null, badges: [], codeSolved: 0, reviews: 0, perfects: 0,
+    xp: 0, done: {}, streak: 0, bestStreak: 0, lastDay: null, badges: [], codeSolved: 0, reviews: 0, perfects: 0, comebacks: 0,
     sound: true, play: "", hearts: MAX_HEARTS, heartAt: null, goal: 50, day: null, dayXP: 0,
   };
   let S;
@@ -129,6 +131,7 @@
   const BADGES = [
     { id: "first", icon: "🐣", name: "Hello, World", desc: "Finish your first lesson", ok: () => doneCount() >= 1 },
     { id: "perfect", icon: "💎", name: "Flawless", desc: "Finish a lesson with no mistakes", ok: () => S.perfects >= 1 },
+    { id: "comeback", icon: "💡", name: "Comeback", desc: "Solve a similar problem after a walkthrough", ok: () => (S.comebacks || 0) >= 1 },
     { id: "goal", icon: "🎯", name: "Goal Getter", desc: "Hit your daily XP goal", ok: () => todayXP() >= S.goal },
     { id: "coder5", icon: "⌨️", name: "Coder", desc: "Pass 5 code challenges", ok: () => S.codeSolved >= 5 },
     { id: "coder20", icon: "🧠", name: "Problem Solver", desc: "Pass 20 code challenges", ok: () => S.codeSolved >= 20 },
@@ -740,8 +743,12 @@
     let fails = 0, usedSolution = false, hintsShown = 0;
     const hints = s.hints || (s.hint ? [s.hint] : []);
     const SOLUTION_AFTER = 3;
+    const canWalk = !!(s.walk && s.alt);
     const starter = s.carry && L.lastCode != null ? L.lastCode.replace(/\s*$/, "\n") + (s.add || "") : (s.starter || "");
-    body.innerHTML = `<div class="kicker">${kicker("⌨️ Code challenge")}</div>
+    const tip = s.retry ? "Same idea, built differently. Show yourself you've got it."
+      : canWalk ? "Solve it yourself first. Hints cost XP. If you get it wrong, you can get walked through it."
+      : `Solve it yourself first. Hints cost XP, and the solution unlocks after ${SOLUTION_AFTER} failed checks.`;
+    body.innerHTML = `<div class="kicker">${kicker(s.retry ? "🔁 Try a similar one" : "⌨️ Code challenge")}</div>
       <h3>${md(s.q)}</h3>
       ${panel(editorInner(starter), { run: true, id: "cp" })}
       ${keysHTML()}
@@ -750,7 +757,7 @@
         <button class="btn ghost small" id="sol" hidden>👀 Solution (no XP)</button>
         <button class="btn ghost small" id="reset">↺ Reset</button>
       </div>
-      <p class="tip" id="solTip">Solve it yourself first. Hints cost XP, and the solution unlocks after ${SOLUTION_AFTER} failed checks.</p>
+      <p class="tip" id="solTip">${tip}</p>
       <div id="hintArea"></div>
       <div class="pystatus"></div>`;
     pyStatusUI();
@@ -762,7 +769,7 @@
     $(".runbtn", cp).onclick = () => runInto(cp, ta.value);
     $("#hint").onclick = () => {
       if (hintsShown >= hints.length) return;
-      if (hintsShown === 0) L.mistakes++; // using hints costs a star
+      if (hintsShown === 0 && !s.retry) L.mistakes++; // using hints costs a star
       hintsShown++;
       $("#hintArea").innerHTML = hints.slice(0, hintsShown).map((h, i) => `<div class="hintbox">💡 <b>Hint ${i + 1}:</b> ${md(h)}</div>`).join("");
       const hb = $("#hint");
@@ -785,27 +792,89 @@
         let x = 0;
         if (!usedSolution) {
           L.combo++; L.bestCombo = Math.max(L.bestCombo, L.combo);
-          x = award(Math.max(10, 30 - hintsShown * 8)); L.codePassed++;
+          x = award(s.retry ? Math.max(8, 15 - hintsShown * 4) : Math.max(10, 30 - hintsShown * 8)); L.codePassed++;
         }
+        if (s.retry) S.comebacks = (S.comebacks || 0) + 1;
         renderCombo(true); progress(); sfx.good();
-        const note = usedSolution ? "Try writing it yourself next time." : hintsShown ? `Solved with ${hintsShown} hint${hintsShown > 1 ? "s" : ""}.` : fails ? "" : "First try, no hints. 💪";
-        feedback(true, usedSolution ? "Done" : "It works!", note, x);
+        const note = usedSolution ? "Try writing it yourself next time."
+          : s.retry ? "You learned it from your mistake. 💡"
+          : hintsShown ? `Solved with ${hintsShown} hint${hintsShown > 1 ? "s" : ""}.` : fails ? "" : "First try, no hints. 💪";
+        feedback(true, usedSolution ? "Done" : s.retry ? "Got it this time!" : "It works!", note, x);
       } else {
         fails++; L.combo = 0; renderCombo(); sfx.bad();
-        if (fails === 1) { L.mistakes++; if (L.mode === "lesson") loseHeart(); }
-        if (fails >= SOLUTION_AFTER) { $("#sol").hidden = false; $("#solTip").hidden = true; }
+        // one heart per challenge: retries after a walkthrough are free
+        if (fails === 1 && !s.retry) { L.mistakes++; if (L.mode === "lesson") loseHeart(); }
         showConsole(out, res);
         const msg = res.error ? `Your code hit an error: <code>${esc(res.error)}</code>` : esc(res.fail || "Not quite.");
+        const retry = () => {
+          if (L.mode === "lesson" && S.hearts <= 0) return outOfHearts();
+          setCheck(); ta.focus();
+        };
+        if (canWalk) {
+          setFoot(`<div class="fb-title">❌ Not yet</div>
+            <div class="fb-text">${msg}</div>
+            <button class="btn block bad" id="walkBtn">🧭 Walk me through it</button>
+            <button class="btn block ghost" id="fixBtn" style="margin-top:10px">I'll fix it myself</button>`, "bad");
+          $("#walkBtn").onclick = () => walkthrough(s, msg, ta.value);
+          $("#fixBtn").onclick = retry;
+          setTimeout(() => $("#walkBtn")?.focus({ preventScroll: true }), 50);
+          return;
+        }
+        if (fails >= SOLUTION_AFTER) { $("#sol").hidden = false; $("#solTip").hidden = true; }
         const nudge = fails >= SOLUTION_AFTER
           ? (hintsShown < hints.length ? "Still stuck? Try a hint first. The solution is unlocked if you really need it." : "The solution is unlocked if you really need it.")
           : hintsShown < hints.length && fails >= 2 ? "Stuck? A hint might help." : "Read the message, fix it, and check again.";
-        feedback(false, "Not yet", `${msg}<br><span class='muted'>${nudge}</span>`, 0, "Try again", () => {
-          if (L.mode === "lesson" && S.hearts <= 0) return outOfHearts();
-          setCheck(); ta.focus();
-        });
+        feedback(false, "Not yet", `${msg}<br><span class='muted'>${nudge}</span>`, 0, "Try again", retry);
       }
     }
     setCheck();
+  }
+
+  // Step-by-step walkthrough after a wrong answer, then a similar question.
+  function codeWithNew(prev, cur) {
+    const pool = prev ? prev.split("\n") : [];
+    return cur.split("\n").map(line => {
+      const i = pool.indexOf(line);
+      const isNew = i < 0 && line.trim() !== "";
+      if (i >= 0) pool.splice(i, 1);
+      return `<span class="cl${isNew ? " new" : ""}">${esc(line) || " "}</span>`;
+    }).join("");
+  }
+  function walkthrough(s, msg, yourCode) {
+    let k = 0;
+    const steps = s.walk;
+    body.innerHTML = `<div class="kicker">🧭 Walkthrough</div>
+      <h3>Let's build it step by step</h3>
+      <div class="hintbox wrong-box"><b>What happened:</b> ${msg}</div>
+      <details class="yours"><summary>Your code</summary><pre class="code mini">${esc(yourCode || "(empty)")}</pre></details>
+      <ol class="wsteps" id="wsteps"></ol>
+      <div id="wcode"></div>`;
+    const list = $("#wsteps"), codeBox = $("#wcode");
+    function draw() {
+      list.innerHTML = steps.slice(0, k + 1).map((st, i) =>
+        `<li class="${i < k ? "past" : "now"}"><span class="wnum">${i + 1}</span><div>${md(st.say)}</div></li>`).join("");
+      const last = k === steps.length - 1;
+      codeBox.innerHTML = panel(`<pre class="code wcode">${codeWithNew(k ? steps[k - 1].code : "", steps[k].code)}</pre>`, { run: last, id: "wp" })
+        + (last ? `<p class="tip">Highlighted lines are new. Tap ▶ Run to try the finished code.</p>` : `<p class="tip">Highlighted lines are new in this step.</p>`);
+      if (last) $("#wp .runbtn").onclick = () => runInto($("#wp"), steps[k].code);
+      setFoot(last
+        ? `<button class="btn block good" id="wNext">✓ I understand</button>
+           <p class="tip" style="text-align:center;margin:8px 0 0">Next: a similar problem, set up differently.</p>`
+        : `<div class="row" style="margin:0"><button class="btn ghost" id="wBack" ${k ? "" : "disabled"}>Back</button>
+           <button class="btn" id="wNext" style="flex:1">Next step (${k + 1}/${steps.length})</button></div>`);
+      const back = $("#wBack");
+      if (back) back.onclick = () => { k--; draw(); };
+      $("#wNext").onclick = last ? understood : () => { k++; draw(); codeBox.scrollIntoView({ block: "nearest", behavior: "smooth" }); };
+    }
+    function understood() {
+      if (L.mode === "lesson" && S.hearts <= 0) return outOfHearts();
+      // swap in the paired question; its pair is this one, so they alternate
+      L.queue[L.pos] = { ...s.alt, alt: s, retry: true };
+      renderStep();
+    }
+    sfx.tap();
+    draw();
+    body.scrollTop = 0;
   }
 
   function outOfHearts() {
